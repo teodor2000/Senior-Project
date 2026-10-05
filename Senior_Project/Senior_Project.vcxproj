@@ -145,7 +145,7 @@
     <ClCompile Include="RawProcessing.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\raw_data.csv.csv" />
+    <None Include="..\raw_data.csv" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -23,7 +23,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\raw_data.csv.csv">
+    <None Include="..\raw_data.csv">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

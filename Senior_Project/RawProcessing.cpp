@@ -6,16 +6,18 @@
 using namespace std;
 
 
-ifstream file("raw_data.csv");
+
 
 struct SensorData {
 	double time, latitude, longitude, altitude, altitude_wgs84, speed, direction, distance, horizontal_accuracy, vertical_accuracy, satelites;
 };
 
 int main() {
+	ifstream file("C:\\Users\\Teo\\source\\repos\\Senior_Project\\Senior_Project\\RawProcessing.cpp");
+
 	vector<SensorData> data;
 	string line;
-	// Skip the header row
+	
 	getline(file, line);
 	while (getline(file, line)) {
 		stringstream ss(line);
@@ -26,8 +28,8 @@ int main() {
 		getline(ss, val, ','); record.longitude = stod(val);
 		getline(ss, val, ','); record.altitude = stod(val);
 		getline(ss, val, ','); record.altitude_wgs84 = stod(val);
-		getline(ss, val, ','); record.speed = stod(val);
-		getline(ss, val, ','); record.direction = stod(val);
+		getline(ss, val, ','); record.speed = val.empty() ? 0.0 : stod(val);
+		getline(ss, val, ','); record.direction = val.empty() ? 0.0 : stod(val);
 		getline(ss, val, ','); record.distance = stod(val);
 		getline(ss, val, ','); record.horizontal_accuracy = stod(val);
 		getline(ss, val, ','); record.vertical_accuracy = stod(val);
