@@ -18,5 +18,13 @@
     <ClCompile Include="..\Source1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RawProcessing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\raw_data.csv.csv">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
