@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cmath>	
 using namespace std;
 
 
@@ -12,8 +13,31 @@ struct SensorData {
 	double time, latitude, longitude, altitude, altitude_wgs84, speed, direction, distance, horizontal_accuracy, vertical_accuracy, satelites;
 };
 
+struct TestRecord {
+	double accX, accY, accZ;
+	string classification;
+};
+
+double SafeThreshold(const string testFile) {
+	ifstream file(testFile);
+	string line;
+	double maxSafeAccel = 0.0;
+
+	getline(file, line);
+	while (getline(file, line)) {
+		stringstream ss(line);
+	}
+	return maxSafeAccel;
+}
+void evaluateDrivingData(const string rawFile, double threshold) {
+	ifstream file(rawFile);
+	if (!file.is_open()) {
+		cout << "Failed to open " << rawFile << "\n";
+		return;
+	}
+}
 int main() {
-	ifstream file("C:\\Users\\Teo\\source\\repos\\Senior_Project\\Senior_Project\\RawProcessing.cpp");
+	ifstream file("raw_data2.csv");
 
 	vector<SensorData> data;
 	string line;
@@ -40,5 +64,8 @@ int main() {
 	if (!data.empty()) {
 		cout << "Testing Latitude value on first row: " << data[0].latitude << endl;
 	}
+
+	double standard = SafeThreshold("test_motion_data.csv");
+	evaluateDrivingData("raw_data2.csv", standard);
 	return 0;
-}
+} 
