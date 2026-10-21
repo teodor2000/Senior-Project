@@ -3,69 +3,77 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <cmath>	
+#include <cmath>
+
 using namespace std;
 
-
-
-
-struct SensorData {
-	double time, latitude, longitude, altitude, altitude_wgs84, speed, direction, distance, horizontal_accuracy, vertical_accuracy, satelites;
-};
-
-struct TestRecord {
-	double accX, accY, accZ;
-	string classification;
-};
+double safe_stod(string val) {
+    double number = 0.0;
+    stringstream x(val);
+    x >> number;
+    return number;
+}
 
 double SafeThreshold(const string testFile) {
-	ifstream file(testFile);
-	string line;
-	double maxSafeAccel = 0.0;
+    ifstream file(testFile);
+    string line, val, classification;
+    double maxAccel = 0.0, x, y, z, magnitude;
 
-	getline(file, line);
-	while (getline(file, line)) {
-		stringstream ss(line);
-	}
-	return maxSafeAccel;
+    getline(file, line);
+
+    while (getline(file, line)) {
+        stringstream ss(line);
+        getline(ss, val, ','); x = safe_stod(val);
+        getline(ss, val, ','); y = safe_stod(val);
+        getline(ss, val, ','); z = safe_stod(val);
+
+        for (int i = 0; i < 3; i++) {
+            getline(ss, val, ',');
+        }
+        getline(ss, classification, ',');
+
+        if (classification.find("NORMAL") != string::npos) {
+            magnitude = sqrt((x * x) + (y * y) + (z * z));
+            if (magnitude > maxAccel) {
+                maxAccel = magnitude;
+            }
+        }
+    }
+    return maxAccel;
 }
+
 void evaluateDrivingData(const string rawFile, double threshold) {
-	ifstream file(rawFile);
-	if (!file.is_open()) {
-		cout << "Failed to open " << rawFile << "\n";
-		return;
-	}
+    ifstream file(rawFile);
+    string line, val;
+    double absolute_accel;
+    int total = 0, aggressive = 0;
+
+    getline(file, line);
+
+    while (getline(file, line)) {
+        stringstream ss(line);
+        for (int i = 0; i < 4; i++) {
+            getline(ss, val, ',');
+        }
+
+        getline(ss, val, ',');
+        absolute_accel = safe_stod(val);
+
+        if (absolute_accel > threshold) {
+            aggressive++;
+        }
+        total++;
+    }
+
+    cout << "Total records processed: " << total << "\n";
+    cout << "Aggressive events detected: " << aggressive << "\n";
 }
+
 int main() {
-	ifstream file("raw_data2.csv");
+    double standard = SafeThreshold("test_motion_data.csv");
+    cout << "Normal Threshold limit: " << standard << " m/s^2\n";
 
-	vector<SensorData> data;
-	string line;
-	
-	getline(file, line);
-	while (getline(file, line)) {
-		stringstream ss(line);
-		SensorData record;
-		string val;
-		getline(ss, val, ','); record.time = stod(val);
-		getline(ss, val, ','); record.latitude = stod(val);
-		getline(ss, val, ','); record.longitude = stod(val);
-		getline(ss, val, ','); record.altitude = stod(val);
-		getline(ss, val, ','); record.altitude_wgs84 = stod(val);
-		getline(ss, val, ','); record.speed = val.empty() ? 0.0 : stod(val);
-		getline(ss, val, ','); record.direction = val.empty() ? 0.0 : stod(val);
-		getline(ss, val, ','); record.distance = stod(val);
-		getline(ss, val, ','); record.horizontal_accuracy = stod(val);
-		getline(ss, val, ','); record.vertical_accuracy = stod(val);
-		getline(ss, val, ','); record.satelites = stod(val);
-		data.push_back(record);
-	}
-	cout << "Successfully loaded " << data.size() << " sensor records." << endl;
-	if (!data.empty()) {
-		cout << "Testing Latitude value on first row: " << data[0].latitude << endl;
-	}
+    evaluateDrivingData("raw_data2.csv", standard);
 
-	double standard = SafeThreshold("test_motion_data.csv");
-	evaluateDrivingData("raw_data2.csv", standard);
-	return 0;
-} 
+    return 0;
+}
