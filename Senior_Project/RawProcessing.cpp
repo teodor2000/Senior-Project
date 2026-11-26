@@ -149,6 +149,190 @@ void inspectAccelerationAxes(const string& rawFile) {
 }
 
 
+enum class MotionType {
+    Neutral,
+    Accelerating,
+    Braking
+};
+
+struct MotionSample {
+    double time;
+    double longitudinalAcceleration;
+};
+
+struct MotionEvent {
+    MotionType type;
+    double startTime;
+    double endTime;
+};
+
+// Determine the movement type using signed acceleration.
+MotionType classifyMotion(double acceleration, double threshold) {
+    if (acceleration > threshold)
+        return MotionType::Accelerating;
+
+    if (acceleration < -threshold)
+        return MotionType::Braking;
+
+    return MotionType::Neutral;
+}
+
+// Identify periods of acceleration or braking.
+vector<MotionEvent> detectMotionEvents(
+    const vector<MotionSample>& samples,
+    double threshold,
+    double minDuration)
+{
+    vector<MotionEvent> events;
+
+    MotionType current = MotionType::Neutral;
+    double start = 0.0;
+    double last = 0.0;
+
+    auto finishEvent = [&]() {
+        if (current != MotionType::Neutral &&
+            last - start >= minDuration) {
+            events.push_back({ current, start, last });
+        }
+        };
+
+    for (const MotionSample& sample : samples) {
+        MotionType next = classifyMotion(
+            sample.longitudinalAcceleration, threshold
+        );
+
+        if (next != current) {
+            finishEvent();
+            current = next;
+            start = sample.time;
+        }
+
+        last = sample.time;
+    }
+
+    finishEvent();
+    return events;
+}
+
+// Count acceleration events followed by braking.
+int countAccelBrakePairs(
+    const vector<MotionEvent>& events,
+    double maxGap)
+{
+    int pairs = 0;
+
+    for (size_t i = 1; i < events.size(); ++i) {
+        if (events[i - 1].type == MotionType::Accelerating &&
+            events[i].type == MotionType::Braking &&
+            events[i].startTime >= events[i - 1].endTime &&
+            events[i].startTime - events[i - 1].endTime <= maxGap) {
+            pairs++;
+        }
+    }
+
+    return pairs;
+}
+
+
+bool runDetectorTests() {
+    const double threshold = 1.5;
+    const double minDuration = 0.3;
+
+    int passed = 0;
+    int total = 0;
+
+    auto check = [&](bool condition, const char* label) {
+        total++;
+
+        if (condition)
+            passed++;
+
+        cout << (condition ? "PASS: " : "FAIL: ")
+            << label << "\n";
+        };
+
+    // Test 1: Almost no acceleration.
+    vector<MotionSample> stationary = {
+        {0.0, 0.0},
+        {0.5, 0.2},
+        {1.0, -0.1}
+    };
+
+    check(
+        detectMotionEvents(stationary, threshold, minDuration).empty(),
+        "No movement = no events"
+    );
+
+    // Test 2: A very short acceleration spike.
+    vector<MotionSample> spike = {
+        {0.0, 0.0},
+        {0.1, 2.0},
+        {0.2, 0.0}
+    };
+
+    check(
+        detectMotionEvents(spike, threshold, minDuration).empty(),
+        "Short acceleration spike ignored"
+    );
+
+    // Tests 3 and 4: Two acceleration-braking cycles.
+    vector<MotionSample> sequence = {
+        {0.0, 0.0},
+        {0.2, 2.0},
+        {0.6, 2.0},
+        {0.8, 0.0},
+
+        {1.0, -2.0},
+        {1.4, -2.0},
+        {1.6, 0.0},
+
+        {2.0, 2.3},
+        {2.4, 2.3},
+        {2.6, 0.0},
+
+        {3.0, -2.3},
+        {3.4, -2.3},
+        {3.6, 0.0}
+    };
+
+    auto events = detectMotionEvents(
+        sequence, threshold, minDuration
+    );
+
+    check(
+        events.size() == 4,
+        "Four events detected"
+    );
+
+    check(
+        countAccelBrakePairs(events, 10.0) == 2,
+        "Two acceleration-braking pairs"
+    );
+
+    // Test 5: Braking without prior acceleration.
+    vector<MotionSample> braking = {
+        {0.0, -2.0},
+        {0.4, -2.0},
+        {0.6, 0.0}
+    };
+
+    auto brakingEvents = detectMotionEvents(
+        braking, threshold, minDuration
+    );
+
+    check(
+        brakingEvents.size() == 1 &&
+        countAccelBrakePairs(brakingEvents, 10.0) == 0,
+        "Braking alone is not a pair"
+    );
+
+    cout << passed << "/" << total
+        << " tests passed\n";
+
+    return passed == total;
+}
+
+
 int main() {
     double standard = SafeThreshold("test_motion_data.csv");
 
@@ -157,8 +341,14 @@ int main() {
 
     evaluateDrivingData("raw_data2.csv", standard);
 
-    // Inspect signed acceleration values
     inspectAccelerationAxes("raw_data2.csv");
+
+    cout << "\n--- Event Detection Tests ---\n";
+
+    if (!runDetectorTests()) {
+        return 1;
+    }
 
     return 0;
 }
+
